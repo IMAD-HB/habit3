@@ -27,3 +27,21 @@ export interface UpdateTimeBlockData {
   endAt?: string;
   status?: TimeBlockStatus;
 }
+
+export type CopyWeekSkipReason = "not_current_priority" | "overlap";
+
+export interface CopyWeekData {
+  sourceWeeklyPlanId: string;
+  targetWeeklyPlanId: string;
+}
+
+export interface CopyWeekResponse {
+  success: boolean;
+  data: {
+    copiedBlocks: TimeBlock[];
+    skippedBlocks: {
+      timeBlockId: string;
+      reason: CopyWeekSkipReason;
+    }[];
+  };
+}

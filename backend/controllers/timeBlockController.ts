@@ -141,6 +141,161 @@ export const createTimeBlock = async (
   });
 };
 
+export const copyPreviousWeekSchedule = async (
+  req: AuthRequest,
+  res: Response,
+): Promise<void> => {
+  const userId = req.userId!;
+
+  const { sourceWeeklyPlanId, targetWeeklyPlanId } = req.body;
+
+  if (sourceWeeklyPlanId === targetWeeklyPlanId) {
+    res.status(400).json({
+      success: false,
+      message: "Source and target weekly plans must be different",
+    });
+    return;
+  }
+
+  const [sourcePlan, targetPlan] = await Promise.all([
+    WeeklyPlan.findById(sourceWeeklyPlanId),
+    WeeklyPlan.findById(targetWeeklyPlanId),
+  ]);
+
+  if (!sourcePlan || sourcePlan.userId.toString() !== userId) {
+    res.status(404).json({
+      success: false,
+      message: "Source weekly plan not found",
+    });
+    return;
+  }
+
+  if (!targetPlan || targetPlan.userId.toString() !== userId) {
+    res.status(404).json({
+      success: false,
+      message: "Target weekly plan not found",
+    });
+    return;
+  }
+
+  const sourceBlocks = await TimeBlock.find({
+    userId,
+    weeklyPlanId: sourcePlan._id,
+  }).sort({ startAt: 1 });
+
+  const currentPriorityIds = new Set(
+    targetPlan.priorities.map((priorityId) => priorityId.toString()),
+  );
+
+  const existingTargetBlocks = await TimeBlock.find({
+    userId,
+    weeklyPlanId: targetPlan._id,
+    status: { $ne: "cancelled" },
+  });
+
+  const copiedBlocks = [];
+  const skippedBlocks: {
+    timeBlockId: string;
+    reason: "not_current_priority" | "overlap";
+  }[] = [];
+
+  const targetWeekEndBoundary = getWeeklyPlanEndBoundary(targetPlan.weekEnd);
+
+  for (const sourceBlock of sourceBlocks) {
+    const activityId = sourceBlock.activityId.toString();
+
+    if (!currentPriorityIds.has(activityId)) {
+      skippedBlocks.push({
+        timeBlockId: sourceBlock._id.toString(),
+        reason: "not_current_priority",
+      });
+
+      continue;
+    }
+
+    const offsetFromWeekStart =
+      sourceBlock.startAt.getTime() - sourcePlan.weekStart.getTime();
+
+    const duration =
+      sourceBlock.endAt.getTime() - sourceBlock.startAt.getTime();
+
+    const targetStartAt = new Date(
+      targetPlan.weekStart.getTime() + offsetFromWeekStart,
+    );
+
+    const targetEndAt = new Date(targetStartAt.getTime() + duration);
+
+    if (
+      targetStartAt < targetPlan.weekStart ||
+      targetEndAt > targetWeekEndBoundary
+    ) {
+      skippedBlocks.push({
+        timeBlockId: sourceBlock._id.toString(),
+        reason: "overlap",
+      });
+
+      continue;
+    }
+
+    const hasOverlap = existingTargetBlocks.some(
+      (block) => block.startAt < targetEndAt && block.endAt > targetStartAt,
+    );
+
+    if (hasOverlap) {
+      skippedBlocks.push({
+        timeBlockId: sourceBlock._id.toString(),
+        reason: "overlap",
+      });
+
+      continue;
+    }
+
+    const copiedBlock = await TimeBlock.create({
+      userId,
+      weeklyPlanId: targetPlan._id,
+      activityId: sourceBlock.activityId,
+      startAt: targetStartAt,
+      endAt: targetEndAt,
+      status: "planned",
+    });
+
+    await copiedBlock.populate([
+      {
+        path: "activityId",
+        select: "title description quadrant estimatedDuration completed roleId",
+        populate: {
+          path: "roleId",
+          select: "name color order",
+        },
+      },
+      {
+        path: "weeklyPlanId",
+        select: "weekStart weekEnd",
+      },
+    ]);
+
+    copiedBlocks.push(copiedBlock);
+
+    existingTargetBlocks.push({
+      _id: copiedBlock._id,
+      userId: copiedBlock.userId,
+      weeklyPlanId: copiedBlock.weeklyPlanId,
+      activityId: copiedBlock.activityId,
+      startAt: copiedBlock.startAt,
+      endAt: copiedBlock.endAt,
+      status: copiedBlock.status,
+    } as (typeof existingTargetBlocks)[number]);
+  }
+
+  res.status(201).json({
+    success: true,
+    data: {
+      copiedBlocks,
+      skippedBlocks,
+    },
+  });
+};
+
 export const getTimeBlocks = async (
   req: AuthRequest,
   res: Response,

@@ -1,5 +1,8 @@
 import api from "../lib/api";
+
 import type {
+  CopyWeekData,
+  CopyWeekResponse,
   CreateTimeBlockData,
   TimeBlock,
   UpdateTimeBlockData,
@@ -44,6 +47,17 @@ export const createTimeBlock = async (
   data: CreateTimeBlockData,
 ): Promise<TimeBlockResponse> => {
   const response = await api.post<TimeBlockResponse>("/time-blocks", data);
+
+  return response.data;
+};
+
+export const copyPreviousWeekSchedule = async (
+  data: CopyWeekData,
+): Promise<CopyWeekResponse> => {
+  const response = await api.post<CopyWeekResponse>(
+    "/time-blocks/copy-week",
+    data,
+  );
 
   return response.data;
 };

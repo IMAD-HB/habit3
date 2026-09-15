@@ -15,6 +15,7 @@ import WeeklyPlanSelector from "../components/schedule/WeeklyPlanSelector";
 import WeeklyScheduleCalendar from "../components/schedule/WeeklyScheduleCalendar";
 
 import {
+  copyPreviousWeekSchedule,
   createTimeBlock,
   deleteTimeBlock,
   getTimeBlocks,
@@ -122,6 +123,41 @@ const SchedulePage = () => {
     },
   });
 
+  const copyWeekMutation = useMutation({
+    mutationFn: ({
+      sourceWeeklyPlanId,
+      targetWeeklyPlanId,
+    }: {
+      sourceWeeklyPlanId: string;
+      targetWeeklyPlanId: string;
+    }) =>
+      copyPreviousWeekSchedule({
+        sourceWeeklyPlanId,
+        targetWeeklyPlanId,
+      }),
+    onSuccess: (response) => {
+      queryClient.invalidateQueries({
+        queryKey: ["time-blocks", activePlanId],
+      });
+
+      const copiedCount = response.data.copiedBlocks.length;
+      const skippedCount = response.data.skippedBlocks.length;
+
+      if (skippedCount === 0) {
+        toast.success(
+          `${copiedCount} time block${copiedCount === 1 ? "" : "s"} copied successfully.`,
+        );
+      } else {
+        toast.success(
+          `${copiedCount} time block${copiedCount === 1 ? "" : "s"} copied. ${skippedCount} skipped.`,
+        );
+      }
+    },
+    onError: () => {
+      toast.error("Unable to copy last week's schedule.");
+    },
+  });
+
   const copyMutation = useMutation({
     mutationFn: (data: CreateTimeBlockData) => createTimeBlock(data),
     onSuccess: () => {
@@ -180,6 +216,34 @@ const SchedulePage = () => {
       toast.error("Unable to delete time block.");
     },
   });
+
+  const handleCopyPreviousWeek = () => {
+    if (!activePlan) {
+      return;
+    }
+
+    const previousWeekStart = new Date(
+      `${activePlan.weekStart.slice(0, 10)}T00:00:00`,
+    );
+
+    previousWeekStart.setDate(previousWeekStart.getDate() - 7);
+
+    const previousWeekStartKey = getDateKey(previousWeekStart);
+
+    const previousPlan = weeklyPlans.find(
+      (plan) => plan.weekStart.slice(0, 10) === previousWeekStartKey,
+    );
+
+    if (!previousPlan) {
+      toast.error("No previous weekly plan found.");
+      return;
+    }
+
+    copyWeekMutation.mutate({
+      sourceWeeklyPlanId: previousPlan._id,
+      targetWeeklyPlanId: activePlan._id,
+    });
+  };
 
   const handleCreate = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -310,11 +374,24 @@ const SchedulePage = () => {
       <main className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
         <ScheduleHeader hasPlan={true} />
 
-        <WeeklyPlanSelector
-          weeklyPlans={weeklyPlans}
-          activePlanId={activePlanId}
-          onChange={handlePlanChange}
-        />
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <WeeklyPlanSelector
+            weeklyPlans={weeklyPlans}
+            activePlanId={activePlanId}
+            onChange={handlePlanChange}
+          />
+
+          <button
+            type="button"
+            onClick={handleCopyPreviousWeek}
+            disabled={copyWeekMutation.isPending}
+            className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {copyWeekMutation.isPending
+              ? "Copying schedule..."
+              : "Copy last week's schedule"}
+          </button>
+        </div>
 
         {activePlan && (
           <>

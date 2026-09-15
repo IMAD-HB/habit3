@@ -17,9 +17,9 @@ interface ActivityFormProps {
 
 const quadrantLabels: Record<Quadrant, string> = {
   I: "Urgent & Important",
-  II: "Important, Not Urgent",
-  III: "Urgent, Not Important",
-  IV: "Not Important",
+  II: "Not Urgent & Important",
+  III: "Urgent & Not Important",
+  IV: "Not Urgent & Not Important",
 };
 
 const ActivityForm = ({

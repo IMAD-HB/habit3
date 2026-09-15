@@ -2,7 +2,6 @@ import type { Activity, Quadrant } from "../../types/activity";
 
 interface ActivityCardProps {
   activity: Activity;
-  onToggleComplete: (activity: Activity, completed: boolean) => void;
   onEdit: (activity: Activity) => void;
   onDelete: (activity: Activity) => void;
 }
@@ -14,66 +13,41 @@ const quadrantStyles: Record<Quadrant, string> = {
   IV: "bg-slate-100 text-slate-600 border-slate-200",
 };
 
-const ActivityCard = ({
-  activity,
-  onToggleComplete,
-  onEdit,
-  onDelete,
-}: ActivityCardProps) => {
+const ActivityCard = ({ activity, onEdit, onDelete }: ActivityCardProps) => {
   const role = typeof activity.roleId === "string" ? null : activity.roleId;
 
   return (
-    <article
-      className={`rounded-2xl border bg-white p-6 shadow-sm transition ${
-        activity.completed ? "border-slate-200 opacity-60" : "border-slate-200"
-      }`}
-    >
-      <div className="flex items-start justify-between gap-4">
-        <div className="min-w-0">
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            {role && (
-              <span
-                className="rounded-full px-2.5 py-1 text-xs font-medium"
-                style={{
-                  backgroundColor: role.color ? `${role.color}20` : "#f1f5f9",
-                  color: role.color || "#475569",
-                }}
-              >
-                {role.name}
-              </span>
-            )}
-
+    <article className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm transition">
+      <div className="min-w-0">
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {role && (
             <span
-              className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
-                quadrantStyles[activity.quadrant]
-              }`}
+              className="rounded-full px-2.5 py-1 text-xs font-medium"
+              style={{
+                backgroundColor: role.color ? `${role.color}20` : "#f1f5f9",
+                color: role.color || "#475569",
+              }}
             >
-              Q{activity.quadrant}
+              {role.name}
             </span>
-          </div>
+          )}
 
-          <h3
-            className={`font-semibold text-slate-900 ${
-              activity.completed ? "line-through" : ""
+          <span
+            className={`rounded-full border px-2.5 py-1 text-xs font-medium ${
+              quadrantStyles[activity.quadrant]
             }`}
           >
-            {activity.title}
-          </h3>
-
-          {activity.description && (
-            <p className="mt-2 text-sm leading-6 text-slate-500">
-              {activity.description}
-            </p>
-          )}
+            Q{activity.quadrant}
+          </span>
         </div>
 
-        <input
-          type="checkbox"
-          checked={activity.completed}
-          onChange={(event) => onToggleComplete(activity, event.target.checked)}
-          className="mt-1 h-4 w-4 shrink-0 accent-slate-900"
-          aria-label={`Mark ${activity.title} as completed`}
-        />
+        <h3 className="font-semibold text-slate-900">{activity.title}</h3>
+
+        {activity.description && (
+          <p className="mt-2 text-sm leading-6 text-slate-500">
+            {activity.description}
+          </p>
+        )}
       </div>
 
       <div className="mt-5 flex items-center justify-between border-t border-slate-100 pt-4">

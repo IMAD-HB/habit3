@@ -7,6 +7,7 @@ interface WeeklyPrioritySummaryProps {
   hasCurrentPlan: boolean;
   isDeleting: boolean;
   onTogglePriority: (activityId: string) => void;
+  onMovePriority: (activityId: string, direction: "up" | "down") => void;
   onSave: () => void;
   onDelete: () => void;
 }
@@ -18,6 +19,7 @@ const WeeklyPrioritySummary = ({
   hasCurrentPlan,
   isDeleting,
   onTogglePriority,
+  onMovePriority,
   onSave,
   onDelete,
 }: WeeklyPrioritySummaryProps) => {
@@ -26,7 +28,6 @@ const WeeklyPrioritySummary = ({
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
         <div>
           <h2 className="font-semibold text-gray-900">Weekly priorities</h2>
-
           <p className="mt-1 text-sm text-gray-500">
             {selectedPriorities.length} selected
           </p>
@@ -47,6 +48,9 @@ const WeeklyPrioritySummary = ({
                 return null;
               }
 
+              const isFirst = index === 0;
+              const isLast = index === selectedPriorities.length - 1;
+
               return (
                 <div
                   key={priorityId}
@@ -66,14 +70,36 @@ const WeeklyPrioritySummary = ({
                     </p>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() => onTogglePriority(priorityId)}
-                    className="text-gray-400 hover:text-gray-700"
-                    aria-label={`Remove ${activity.title}`}
-                  >
-                    ×
-                  </button>
+                  <div className="flex shrink-0 items-center gap-1">
+                    <button
+                      type="button"
+                      disabled={isFirst}
+                      onClick={() => onMovePriority(priorityId, "up")}
+                      className="rounded-md px-1.5 py-1 text-sm text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-30"
+                      aria-label={`Move ${activity.title} up`}
+                    >
+                      ↑
+                    </button>
+
+                    <button
+                      type="button"
+                      disabled={isLast}
+                      onClick={() => onMovePriority(priorityId, "down")}
+                      className="rounded-md px-1.5 py-1 text-sm text-gray-400 hover:bg-gray-100 hover:text-gray-700 disabled:cursor-not-allowed disabled:opacity-30"
+                      aria-label={`Move ${activity.title} down`}
+                    >
+                      ↓
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => onTogglePriority(priorityId)}
+                      className="rounded-md px-1.5 py-1 text-gray-400 hover:bg-gray-100 hover:text-gray-700"
+                      aria-label={`Remove ${activity.title}`}
+                    >
+                      ×
+                    </button>
+                  </div>
                 </div>
               );
             })

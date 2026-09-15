@@ -17,8 +17,8 @@ import {
   getActivities,
   updateActivity,
 } from "../services/activityService";
-import { getRoles } from "../services/roleService";
 
+import { getRoles } from "../services/roleService";
 import type { Activity, CreateActivityData } from "../types/activity";
 
 const ActivitiesPage = () => {
@@ -48,17 +48,14 @@ const ActivitiesPage = () => {
 
   const createMutation = useMutation({
     mutationFn: createActivity,
-
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["activities"],
       });
 
       resetForm();
-
       toast.success("Activity created successfully.");
     },
-
     onError: () => {
       toast.error("Unable to create activity.");
     },
@@ -74,10 +71,8 @@ const ActivitiesPage = () => {
       });
 
       resetForm();
-
       toast.success("Activity updated successfully.");
     },
-
     onError: () => {
       toast.error("Unable to update activity.");
     },
@@ -85,40 +80,16 @@ const ActivitiesPage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: deleteActivity,
-
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["activities"],
       });
 
       setActivityToDelete(null);
-
       toast.success("Activity deleted successfully.");
     },
-
     onError: () => {
       toast.error("Unable to delete activity.");
-    },
-  });
-
-  const toggleCompletionMutation = useMutation({
-    mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
-      updateActivity(id, { completed }),
-
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["activities"],
-      });
-
-      toast.success(
-        variables.completed
-          ? "Activity marked as completed."
-          : "Activity marked as incomplete.",
-      );
-    },
-
-    onError: () => {
-      toast.error("Unable to update activity.");
     },
   });
 
@@ -155,13 +126,6 @@ const ActivitiesPage = () => {
     }
 
     deleteMutation.mutate(activityToDelete._id);
-  };
-
-  const handleToggleComplete = (activity: Activity, completed: boolean) => {
-    toggleCompletionMutation.mutate({
-      id: activity._id,
-      completed,
-    });
   };
 
   const isSubmitting = createMutation.isPending || updateMutation.isPending;
@@ -214,7 +178,6 @@ const ActivitiesPage = () => {
                 <ActivityCard
                   key={activity._id}
                   activity={activity}
-                  onToggleComplete={handleToggleComplete}
                   onEdit={startEdit}
                   onDelete={handleDelete}
                 />

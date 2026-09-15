@@ -5,6 +5,7 @@ interface WeeklyScheduleCalendarProps {
   weekDays: Date[];
   timeBlocks: TimeBlock[];
   onEditBlock: (block: TimeBlock) => void;
+  onToggleComplete: (block: TimeBlock) => void;
 }
 
 const isSameDay = (first: string, second: Date) => {
@@ -25,6 +26,7 @@ const WeeklyScheduleCalendar = ({
   weekDays,
   timeBlocks,
   onEditBlock,
+  onToggleComplete,
 }: WeeklyScheduleCalendarProps) => {
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -68,34 +70,64 @@ const WeeklyScheduleCalendar = ({
                 ) : (
                   dayBlocks.map((block) => {
                     const activity = getActivity(block.activityId);
+                    const isCompleted = block.status === "completed";
 
                     return (
-                      <button
+                      <div
                         key={block._id}
-                        type="button"
-                        onClick={() => onEditBlock(block)}
-                        className="w-full rounded-lg border border-gray-200 bg-white p-2 text-left shadow-sm transition hover:border-gray-400"
+                        className={`rounded-lg border bg-white p-2 shadow-sm transition ${
+                          isCompleted
+                            ? "border-green-200 bg-green-50/50"
+                            : "border-gray-200"
+                        }`}
                       >
-                        <p className="truncate text-sm font-medium">
-                          {activity?.title ?? "Activity"}
-                        </p>
+                        <div className="flex items-start gap-2">
+                          <input
+                            type="checkbox"
+                            checked={isCompleted}
+                            onChange={() => onToggleComplete(block)}
+                            onClick={(event) => event.stopPropagation()}
+                            className="mt-0.5 h-4 w-4 shrink-0 accent-green-600"
+                            aria-label={`Mark ${
+                              activity?.title ?? "activity"
+                            } as ${
+                              isCompleted ? "incomplete" : "completed"
+                            }`}
+                          />
 
-                        <p className="mt-1 text-xs text-gray-500">
-                          {new Date(block.startAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}{" "}
-                          —{" "}
-                          {new Date(block.endAt).toLocaleTimeString([], {
-                            hour: "2-digit",
-                            minute: "2-digit",
-                          })}
-                        </p>
+                          <button
+                            type="button"
+                            onClick={() => onEditBlock(block)}
+                            className="min-w-0 flex-1 text-left"
+                          >
+                            <p
+                              className={`truncate text-sm font-medium ${
+                                isCompleted
+                                  ? "text-gray-500 line-through"
+                                  : "text-gray-900"
+                              }`}
+                            >
+                              {activity?.title ?? "Activity"}
+                            </p>
 
-                        <p className="mt-1 text-xs capitalize text-gray-400">
-                          {block.status}
-                        </p>
-                      </button>
+                            <p className="mt-1 text-xs text-gray-500">
+                              {new Date(block.startAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}{" "}
+                              —{" "}
+                              {new Date(block.endAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </p>
+
+                            <p className="mt-1 text-xs capitalize text-gray-400">
+                              {block.status}
+                            </p>
+                          </button>
+                        </div>
+                      </div>
                     );
                   })
                 )}

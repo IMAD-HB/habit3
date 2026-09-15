@@ -20,6 +20,7 @@ import {
   getTimeBlocks,
   updateTimeBlock,
 } from "../services/timeBlockService";
+
 import { getWeeklyPlans } from "../services/weeklyPlanService";
 
 import type {
@@ -133,7 +134,6 @@ const SchedulePage = () => {
       });
 
       setEditingBlock(null);
-
       toast.success("Time block updated successfully.");
     },
 
@@ -151,7 +151,6 @@ const SchedulePage = () => {
       });
 
       setBlockToDelete(null);
-
       toast.success("Time block deleted successfully.");
     },
 
@@ -191,6 +190,18 @@ const SchedulePage = () => {
         startAt: new Date(editingBlock.startAt).toISOString(),
         endAt: new Date(editingBlock.endAt).toISOString(),
         status: editingBlock.status,
+      },
+    });
+  };
+
+  const handleToggleComplete = (block: TimeBlock) => {
+    const nextStatus: TimeBlockStatus =
+      block.status === "completed" ? "planned" : "completed";
+
+    updateMutation.mutate({
+      id: block._id,
+      data: {
+        status: nextStatus,
       },
     });
   };
@@ -255,6 +266,7 @@ const SchedulePage = () => {
               weekDays={weekDays}
               timeBlocks={timeBlocks}
               onEditBlock={handleEdit}
+              onToggleComplete={handleToggleComplete}
             />
 
             <section className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">

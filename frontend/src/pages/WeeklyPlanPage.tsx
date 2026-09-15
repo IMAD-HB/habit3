@@ -249,6 +249,30 @@ const WeeklyPlanPage = () => {
     setSelectedPriorities(nextPriorities);
   };
 
+  const movePriority = (activityId: string, direction: "up" | "down") => {
+    const currentIndex = selectedPriorities.indexOf(activityId);
+
+    if (currentIndex === -1) {
+      return;
+    }
+
+    const targetIndex =
+      direction === "up" ? currentIndex - 1 : currentIndex + 1;
+
+    if (targetIndex < 0 || targetIndex >= selectedPriorities.length) {
+      return;
+    }
+
+    const nextPriorities = [...selectedPriorities];
+
+    [nextPriorities[currentIndex], nextPriorities[targetIndex]] = [
+      nextPriorities[targetIndex],
+      nextPriorities[currentIndex],
+    ];
+
+    setSelectedPriorities(nextPriorities);
+  };
+
   const handlePreviousWeek = () => {
     const date = new Date(`${weekStart}T00:00:00`);
 
@@ -341,6 +365,7 @@ const WeeklyPlanPage = () => {
             hasCurrentPlan={Boolean(currentPlan)}
             isDeleting={deleteMutation.isPending}
             onTogglePriority={togglePriority}
+            onMovePriority={movePriority}
             onSave={handleSave}
             onDelete={handleDelete}
           />

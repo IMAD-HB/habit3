@@ -1,9 +1,18 @@
 import type { Response } from "express";
 
 import type { AuthRequest } from "../middleware/auth.js";
+
 import Activity from "../models/Activity.js";
+
 import TimeBlock from "../models/TimeBlock.js";
+
 import WeeklyPlan from "../models/WeeklyPlan.js";
+
+const getWeeklyPlanEndBoundary = (weekEnd: Date) => {
+  const endBoundary = new Date(weekEnd);
+  endBoundary.setDate(endBoundary.getDate() + 1);
+  return endBoundary;
+};
 
 export const createTimeBlock = async (
   req: AuthRequest,
@@ -73,10 +82,9 @@ export const createTimeBlock = async (
     return;
   }
 
-  if (
-    parsedStartAt < weeklyPlan.weekStart ||
-    parsedEndAt > weeklyPlan.weekEnd
-  ) {
+  const weekEndBoundary = getWeeklyPlanEndBoundary(weeklyPlan.weekEnd);
+
+  if (parsedStartAt < weeklyPlan.weekStart || parsedEndAt > weekEndBoundary) {
     res.status(400).json({
       success: false,
       message: "Time block must be within the weekly plan dates",
@@ -258,7 +266,9 @@ export const updateTimeBlock = async (
     return;
   }
 
-  if (newStartAt < weeklyPlan.weekStart || newEndAt > weeklyPlan.weekEnd) {
+  const weekEndBoundary = getWeeklyPlanEndBoundary(weeklyPlan.weekEnd);
+
+  if (newStartAt < weeklyPlan.weekStart || newEndAt > weekEndBoundary) {
     res.status(400).json({
       success: false,
       message: "Time block must be within the weekly plan dates",

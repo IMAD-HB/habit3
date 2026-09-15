@@ -1,9 +1,11 @@
 import mongoose from "mongoose";
+
 import type { Response } from "express";
 
 import type { AuthRequest } from "../middleware/auth.js";
 
 import Activity from "../models/Activity.js";
+import TimeBlock from "../models/TimeBlock.js";
 import WeeklyPlan from "../models/WeeklyPlan.js";
 
 export const createWeeklyPlan = async (
@@ -194,8 +196,13 @@ export const updateWeeklyPlan = async (
     weeklyPlan.priorities = priorities;
   }
 
-  if (weekStart !== undefined) weeklyPlan.weekStart = weekStart;
-  if (weekEnd !== undefined) weeklyPlan.weekEnd = weekEnd;
+  if (weekStart !== undefined) {
+    weeklyPlan.weekStart = weekStart;
+  }
+
+  if (weekEnd !== undefined) {
+    weeklyPlan.weekEnd = weekEnd;
+  }
 
   await weeklyPlan.save();
 
@@ -229,7 +236,7 @@ export const deleteWeeklyPlan = async (
 
   const userId = new mongoose.Types.ObjectId(req.userId);
 
-  const weeklyPlan = await WeeklyPlan.findOneAndDelete({
+  const weeklyPlan = await WeeklyPlan.findOne({
     _id: req.params.id,
     userId,
   });
@@ -241,6 +248,13 @@ export const deleteWeeklyPlan = async (
     });
     return;
   }
+
+  await TimeBlock.deleteMany({
+    weeklyPlanId: weeklyPlan._id,
+    userId,
+  });
+
+  await weeklyPlan.deleteOne();
 
   res.json({
     success: true,

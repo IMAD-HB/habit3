@@ -21,7 +21,6 @@ import {
   getTimeBlocks,
   updateTimeBlock,
 } from "../services/timeBlockService";
-
 import { getWeeklyPlans } from "../services/weeklyPlanService";
 
 import type {
@@ -33,6 +32,7 @@ import type {
 const getWeekDays = (weekStart: string, weekEnd: string) => {
   const start = new Date(`${weekStart.slice(0, 10)}T00:00:00`);
   const end = new Date(`${weekEnd.slice(0, 10)}T00:00:00`);
+
   const days: Date[] = [];
   const current = new Date(start);
 
@@ -51,6 +51,14 @@ const formatDateTime = (value: string) => {
     day: "numeric",
     hour: "2-digit",
     minute: "2-digit",
+  });
+};
+
+const formatDisplayDate = (date: string) => {
+  return new Date(`${date.slice(0, 10)}T00:00:00`).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
   });
 };
 
@@ -73,6 +81,7 @@ const SchedulePage = () => {
   const [blockToDelete, setBlockToDelete] = useState<TimeBlock | null>(null);
   const [blockToCopy, setBlockToCopy] = useState<TimeBlock | null>(null);
   const [copyTargetDate, setCopyTargetDate] = useState("");
+  const [selectedCopyWeek, setSelectedCopyWeek] = useState("");
 
   const weeklyPlansQuery = useQuery({
     queryKey: ["weekly-plans"],
@@ -88,6 +97,11 @@ const SchedulePage = () => {
 
   const activePlan = useMemo(
     () => weeklyPlans.find((plan) => plan._id === activePlanId),
+    [weeklyPlans, activePlanId],
+  );
+
+  const availableCopyPlans = useMemo(
+    () => weeklyPlans.filter((plan) => plan._id !== activePlanId),
     [weeklyPlans, activePlanId],
   );
 
@@ -145,16 +159,22 @@ const SchedulePage = () => {
 
       if (skippedCount === 0) {
         toast.success(
-          `${copiedCount} time block${copiedCount === 1 ? "" : "s"} copied successfully.`,
+          `${copiedCount} time block${
+            copiedCount === 1 ? "" : "s"
+          } copied successfully.`,
         );
       } else {
         toast.success(
-          `${copiedCount} time block${copiedCount === 1 ? "" : "s"} copied. ${skippedCount} skipped.`,
+          `${copiedCount} time block${
+            copiedCount === 1 ? "" : "s"
+          } copied. ${skippedCount} skipped.`,
         );
       }
+
+      setSelectedCopyWeek("");
     },
     onError: () => {
-      toast.error("Unable to copy last week's schedule.");
+      toast.error("Unable to copy weekly schedule.");
     },
   });
 
@@ -217,30 +237,22 @@ const SchedulePage = () => {
     },
   });
 
-  const handleCopyPreviousWeek = () => {
-    if (!activePlan) {
+  const handleCopyWeek = () => {
+    if (!activePlan || !selectedCopyWeek) {
       return;
     }
 
-    const previousWeekStart = new Date(
-      `${activePlan.weekStart.slice(0, 10)}T00:00:00`,
+    const sourcePlan = weeklyPlans.find(
+      (plan) => plan._id === selectedCopyWeek,
     );
 
-    previousWeekStart.setDate(previousWeekStart.getDate() - 7);
-
-    const previousWeekStartKey = getDateKey(previousWeekStart);
-
-    const previousPlan = weeklyPlans.find(
-      (plan) => plan.weekStart.slice(0, 10) === previousWeekStartKey,
-    );
-
-    if (!previousPlan) {
-      toast.error("No previous weekly plan found.");
+    if (!sourcePlan) {
+      toast.error("Source weekly plan not found.");
       return;
     }
 
     copyWeekMutation.mutate({
-      sourceWeeklyPlanId: previousPlan._id,
+      sourceWeeklyPlanId: sourcePlan._id,
       targetWeeklyPlanId: activePlan._id,
     });
   };
@@ -355,6 +367,7 @@ const SchedulePage = () => {
     setBlockToDelete(null);
     setBlockToCopy(null);
     setCopyTargetDate("");
+    setSelectedCopyWeek("");
   };
 
   if (weeklyPlansQuery.isLoading) {
@@ -381,16 +394,35 @@ const SchedulePage = () => {
             onChange={handlePlanChange}
           />
 
-          <button
-            type="button"
-            onClick={handleCopyPreviousWeek}
-            disabled={copyWeekMutation.isPending}
-            className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
-          >
-            {copyWeekMutation.isPending
-              ? "Copying schedule..."
-              : "Copy last week's schedule"}
-          </button>
+          <div className="flex flex-col gap-2 sm:flex-row">
+            <select
+              value={selectedCopyWeek}
+              onChange={(event) => setSelectedCopyWeek(event.target.value)}
+              disabled={
+                availableCopyPlans.length === 0 || copyWeekMutation.isPending
+              }
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 outline-none transition hover:bg-gray-50 focus:border-gray-500 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              <option value="">Copy from...</option>
+
+              {availableCopyPlans.map((plan) => (
+                <option key={plan._id} value={plan._id}>
+                  {formatDisplayDate(plan.weekStart)}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={handleCopyWeek}
+              disabled={!selectedCopyWeek || copyWeekMutation.isPending}
+              className="rounded-lg border border-gray-300 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 transition hover:bg-gray-50 disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {copyWeekMutation.isPending
+                ? "Copying schedule..."
+                : "Copy schedule"}
+            </button>
+          </div>
         </div>
 
         {activePlan && (

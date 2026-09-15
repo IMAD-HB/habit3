@@ -47,14 +47,6 @@ const getWeekEnd = (weekStart: string) => {
   return formatDate(date);
 };
 
-const getPreviousWeekStart = (weekStart: string) => {
-  const date = new Date(`${weekStart}T00:00:00`);
-
-  date.setDate(date.getDate() - 7);
-
-  return formatDate(date);
-};
-
 const formatDisplayDate = (date: string) => {
   return new Date(`${date}T00:00:00`).toLocaleDateString("en-US", {
     month: "short",
@@ -74,6 +66,8 @@ const WeeklyPlanPage = () => {
     weekStart: string;
     activityIds: string[];
   } | null>(null);
+
+  const [selectedCopyWeek, setSelectedCopyWeek] = useState("");
 
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
 
@@ -102,12 +96,6 @@ const WeeklyPlanPage = () => {
     (plan) => plan.weekStart.slice(0, 10) === weekStart,
   );
 
-  const previousWeekStart = getPreviousWeekStart(weekStart);
-
-  const previousWeekPlan = weeklyPlans.find(
-    (plan) => plan.weekStart.slice(0, 10) === previousWeekStart,
-  );
-
   const savedPriorities =
     currentPlan?.priorities.map((activity) =>
       typeof activity === "string" ? activity : activity._id,
@@ -132,7 +120,6 @@ const WeeklyPlanPage = () => {
         weekEnd: getWeekEnd(weekStart),
         priorities: selectedPriorities,
       }),
-
     onSuccess: () => {
       setEditedPriorities(null);
 
@@ -142,7 +129,6 @@ const WeeklyPlanPage = () => {
 
       toast.success("Weekly plan created successfully.");
     },
-
     onError: () => {
       toast.error("Unable to create weekly plan.");
     },
@@ -160,7 +146,6 @@ const WeeklyPlanPage = () => {
         priorities: selectedPriorities,
       });
     },
-
     onSuccess: () => {
       setEditedPriorities(null);
 
@@ -170,7 +155,6 @@ const WeeklyPlanPage = () => {
 
       toast.success("Weekly plan updated successfully.");
     },
-
     onError: () => {
       toast.error("Unable to update weekly plan.");
     },
@@ -184,7 +168,6 @@ const WeeklyPlanPage = () => {
 
       return deleteWeeklyPlan(currentPlan._id);
     },
-
     onSuccess: () => {
       setEditedPriorities(null);
       setIsDeleteDialogOpen(false);
@@ -195,19 +178,22 @@ const WeeklyPlanPage = () => {
 
       toast.success("Weekly plan deleted successfully.");
     },
-
     onError: () => {
       toast.error("Unable to delete weekly plan.");
     },
   });
 
-  const copyLastWeekMutation = useMutation({
+  const copyWeekMutation = useMutation({
     mutationFn: () => {
-      if (!previousWeekPlan) {
-        throw new Error("Previous weekly plan not found.");
+      const sourcePlan = weeklyPlans.find(
+        (plan) => plan.weekStart.slice(0, 10) === selectedCopyWeek,
+      );
+
+      if (!sourcePlan) {
+        throw new Error("Source weekly plan not found.");
       }
 
-      const previousPriorities = previousWeekPlan.priorities.map((activity) =>
+      const sourcePriorities = sourcePlan.priorities.map((activity) =>
         typeof activity === "string" ? activity : activity._id,
       );
 
@@ -215,29 +201,28 @@ const WeeklyPlanPage = () => {
         return updateWeeklyPlan(currentPlan._id, {
           weekStart,
           weekEnd: getWeekEnd(weekStart),
-          priorities: previousPriorities,
+          priorities: sourcePriorities,
         });
       }
 
       return createWeeklyPlan({
         weekStart,
         weekEnd: getWeekEnd(weekStart),
-        priorities: previousPriorities,
+        priorities: sourcePriorities,
       });
     },
-
     onSuccess: () => {
       setEditedPriorities(null);
+      setSelectedCopyWeek("");
 
       queryClient.invalidateQueries({
         queryKey: ["weekly-plans"],
       });
 
-      toast.success("Last week's priorities copied successfully.");
+      toast.success("Weekly priorities copied successfully.");
     },
-
     onError: () => {
-      toast.error("Unable to copy last week's plan.");
+      toast.error("Unable to copy weekly priorities.");
     },
   });
 
@@ -280,6 +265,7 @@ const WeeklyPlanPage = () => {
 
     setWeekStart(formatDate(date));
     setEditedPriorities(null);
+    setSelectedCopyWeek("");
   };
 
   const handleNextWeek = () => {
@@ -289,11 +275,13 @@ const WeeklyPlanPage = () => {
 
     setWeekStart(formatDate(date));
     setEditedPriorities(null);
+    setSelectedCopyWeek("");
   };
 
   const handleToday = () => {
     setWeekStart(formatDate(getWeekStart(new Date())));
     setEditedPriorities(null);
+    setSelectedCopyWeek("");
   };
 
   const handleSave = () => {
@@ -312,12 +300,12 @@ const WeeklyPlanPage = () => {
     deleteMutation.mutate();
   };
 
-  const handleCopyLastWeek = () => {
-    if (!previousWeekPlan) {
+  const handleCopyWeek = () => {
+    if (!selectedCopyWeek) {
       return;
     }
 
-    copyLastWeekMutation.mutate();
+    copyWeekMutation.mutate();
   };
 
   const isSaving = createMutation.isPending || updateMutation.isPending;
@@ -339,12 +327,14 @@ const WeeklyPlanPage = () => {
           weekStart={weekStart}
           weekEnd={getWeekEnd(weekStart)}
           formatDisplayDate={formatDisplayDate}
+          weeklyPlans={weeklyPlans}
+          selectedCopyWeek={selectedCopyWeek}
+          onCopyWeekChange={setSelectedCopyWeek}
           onPrevious={handlePreviousWeek}
           onToday={handleToday}
           onNext={handleNextWeek}
-          onCopyLastWeek={handleCopyLastWeek}
-          canCopyLastWeek={Boolean(previousWeekPlan)}
-          isCopying={copyLastWeekMutation.isPending}
+          onCopyWeek={handleCopyWeek}
+          isCopying={copyWeekMutation.isPending}
         />
 
         <div className="grid gap-8 lg:grid-cols-[1fr_360px]">

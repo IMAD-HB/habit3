@@ -429,6 +429,7 @@ const SchedulePage = () => {
           <>
             <CurrentPlanCard
               plan={activePlan}
+              timeBlocks={timeBlocks}
               selectedActivityId={selectedActivityId}
               onSelectActivity={setSelectedActivityId}
             />

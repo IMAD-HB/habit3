@@ -1,7 +1,6 @@
 import { useMemo } from "react";
 
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { toast } from "sonner";
+import { useQuery } from "@tanstack/react-query";
 
 import DashboardError from "../components/dashboard/DashboardError";
 import DashboardHeader from "../components/dashboard/DashboardHeader";
@@ -10,11 +9,8 @@ import DashboardStats from "../components/dashboard/DashboardStats";
 import CurrentWeekCard from "../components/dashboard/CurrentWeekCard";
 import TodaySchedule from "../components/dashboard/TodaySchedule";
 import WeeklyPriorities from "../components/dashboard/WeeklyPriorities";
-
-import { getActivities, updateActivity } from "../services/activityService";
 import { getTimeBlocks } from "../services/timeBlockService";
 import { getWeeklyPlans } from "../services/weeklyPlanService";
-
 import type { Activity, Quadrant } from "../types/activity";
 
 const getWeekStart = (date: Date) => {
@@ -68,9 +64,11 @@ const getActivity = (activityId: Activity | string) => {
   return typeof activityId === "string" ? null : activityId;
 };
 
-const DashboardPage = () => {
-  const queryClient = useQueryClient();
+const getActivityId = (activityId: Activity | string) => {
+  return typeof activityId === "string" ? activityId : activityId._id;
+};
 
+const DashboardPage = () => {
   const {
     data: plansData,
     isLoading: isPlansLoading,
@@ -78,15 +76,6 @@ const DashboardPage = () => {
   } = useQuery({
     queryKey: ["weekly-plans"],
     queryFn: getWeeklyPlans,
-  });
-
-  const {
-    data: activitiesData,
-    isLoading: isActivitiesLoading,
-    isError: isActivitiesError,
-  } = useQuery({
-    queryKey: ["activities"],
-    queryFn: () => getActivities(),
   });
 
   const {
@@ -98,39 +87,9 @@ const DashboardPage = () => {
     queryFn: () => getTimeBlocks(),
   });
 
-  const updateActivityMutation = useMutation({
-    mutationFn: ({ id, completed }: { id: string; completed: boolean }) =>
-      updateActivity(id, { completed }),
-
-    onSuccess: (_, variables) => {
-      queryClient.invalidateQueries({
-        queryKey: ["activities"],
-      });
-
-      queryClient.invalidateQueries({
-        queryKey: ["weekly-plans"],
-      });
-
-      toast.success(
-        variables.completed
-          ? "Activity marked as completed."
-          : "Activity marked as incomplete.",
-      );
-    },
-
-    onError: () => {
-      toast.error("Unable to update activity.");
-    },
-  });
-
   const weeklyPlans = useMemo(
     () => plansData?.data.weeklyPlans ?? [],
     [plansData],
-  );
-
-  const activities = useMemo(
-    () => activitiesData?.data.activities ?? [],
-    [activitiesData],
   );
 
   const timeBlocks = useMemo(
@@ -148,17 +107,52 @@ const DashboardPage = () => {
     [weeklyPlans, currentWeekStart],
   );
 
-  const priorities = currentPlan?.priorities ?? [];
-
-  const completedActivities = activities.filter(
-    (activity) => activity.completed,
+  const priorities = useMemo(
+    () => currentPlan?.priorities ?? [],
+    [currentPlan],
   );
+
+  const scheduledTimeBlocks = useMemo(
+    () =>
+      currentPlan
+        ? timeBlocks.filter((block) => {
+            const weeklyPlanId =
+              typeof block.weeklyPlanId === "string"
+                ? block.weeklyPlanId
+                : block.weeklyPlanId._id;
+
+            return (
+              weeklyPlanId === currentPlan._id && block.status !== "cancelled"
+            );
+          })
+        : [],
+    [currentPlan, timeBlocks],
+  );
+
+  const completedTimeBlocks = useMemo(
+    () => scheduledTimeBlocks.filter((block) => block.status === "completed"),
+    [scheduledTimeBlocks],
+  );
+
+  const completedPriorityCount = useMemo(() => {
+    const completedActivityIds = new Set(
+      completedTimeBlocks.map((block) => getActivityId(block.activityId)),
+    );
+
+    return priorities.filter((priority) =>
+      completedActivityIds.has(priority._id),
+    ).length;
+  }, [priorities, completedTimeBlocks]);
 
   const todaysTimeBlocks = useMemo(() => {
     const today = new Date();
 
     return timeBlocks
       .filter((block) => {
+        if (block.status === "cancelled") {
+          return false;
+        }
+
         const start = new Date(block.startAt);
 
         return (
@@ -172,25 +166,9 @@ const DashboardPage = () => {
       );
   }, [timeBlocks]);
 
-  const scheduledTimeBlocks = currentPlan
-    ? timeBlocks.filter((block) => block.weeklyPlanId === currentPlan._id)
-    : [];
+  const isLoading = isPlansLoading || isTimeBlocksLoading;
 
-  const completedPriorityCount = priorities.filter(
-    (priority) => priority.completed,
-  ).length;
-
-  const isLoading =
-    isPlansLoading || isActivitiesLoading || isTimeBlocksLoading;
-
-  const isError = isPlansError || isActivitiesError || isTimeBlocksError;
-
-  const handleToggleComplete = (activity: Activity) => {
-    updateActivityMutation.mutate({
-      id: activity._id,
-      completed: !activity.completed,
-    });
-  };
+  const isError = isPlansError || isTimeBlocksError;
 
   if (isLoading) {
     return <DashboardSkeleton />;
@@ -213,8 +191,8 @@ const DashboardPage = () => {
         priorityCount={priorities.length}
         completedPriorityCount={completedPriorityCount}
         scheduledBlockCount={scheduledTimeBlocks.length}
-        completedActivityCount={completedActivities.length}
-        totalActivityCount={activities.length}
+        completedBlockCount={completedTimeBlocks.length}
+        totalBlockCount={scheduledTimeBlocks.length}
         todayBlockCount={todaysTimeBlocks.length}
       />
 
@@ -223,8 +201,6 @@ const DashboardPage = () => {
           priorities={priorities}
           quadrantLabels={quadrantLabels}
           quadrantClasses={quadrantClasses}
-          onToggleComplete={handleToggleComplete}
-          isUpdating={updateActivityMutation.isPending}
         />
 
         <TodaySchedule

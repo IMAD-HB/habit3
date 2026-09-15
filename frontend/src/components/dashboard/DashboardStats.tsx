@@ -2,8 +2,8 @@ interface DashboardStatsProps {
   priorityCount: number;
   completedPriorityCount: number;
   scheduledBlockCount: number;
-  completedActivityCount: number;
-  totalActivityCount: number;
+  completedBlockCount: number;
+  totalBlockCount: number;
   todayBlockCount: number;
 }
 
@@ -11,14 +11,14 @@ const DashboardStats = ({
   priorityCount,
   completedPriorityCount,
   scheduledBlockCount,
-  completedActivityCount,
-  totalActivityCount,
+  completedBlockCount,
+  totalBlockCount,
   todayBlockCount,
 }: DashboardStatsProps) => {
   return (
     <section className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
       <div className="rounded-2xl border border-gray-200 bg-white p-5 shadow-sm">
-        <p className="text-sm text-gray-500">Priorities</p>
+        <p className="text-sm text-gray-500">Weekly priorities</p>
 
         <p className="mt-2 text-3xl font-semibold text-gray-900">
           {priorityCount}
@@ -43,11 +43,11 @@ const DashboardStats = ({
         <p className="text-sm text-gray-500">Activities completed</p>
 
         <p className="mt-2 text-3xl font-semibold text-gray-900">
-          {completedActivityCount}
+          {completedBlockCount}
         </p>
 
         <p className="mt-1 text-xs text-gray-500">
-          of {totalActivityCount} total
+          of {totalBlockCount} scheduled
         </p>
       </div>
 

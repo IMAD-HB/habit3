@@ -5,7 +5,11 @@ export type TimeBlockStatus = "planned" | "completed" | "cancelled";
 export interface TimeBlock {
   _id: string;
   userId: string;
-  weeklyPlanId: string;
+  weeklyPlanId:
+    | string
+    | {
+        _id: string;
+      };
   activityId: Activity | string;
   startAt: string;
   endAt: string;

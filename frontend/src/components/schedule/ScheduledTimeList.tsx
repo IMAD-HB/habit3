@@ -1,4 +1,5 @@
 import type { Activity } from "../../types/activity";
+
 import type { TimeBlock } from "../../types/timeBlock";
 
 import TimeBlockEditor from "./TimeBlockEditor";
@@ -10,6 +11,7 @@ interface ScheduledTimeListProps {
   isSaving: boolean;
   isDeleting: boolean;
   onEdit: (block: TimeBlock) => void;
+  onCopy: (block: TimeBlock) => void;
   onEditChange: (block: TimeBlock) => void;
   onSaveEdit: () => void;
   onCancelEdit: () => void;
@@ -37,6 +39,7 @@ const ScheduledTimeList = ({
   isSaving,
   isDeleting,
   onEdit,
+  onCopy,
   onEditChange,
   onSaveEdit,
   onCancelEdit,
@@ -47,7 +50,6 @@ const ScheduledTimeList = ({
       <div className="flex items-center justify-between gap-4">
         <div>
           <h2 className="text-lg font-semibold">Scheduled time</h2>
-
           <p className="mt-1 text-sm text-gray-500">
             {timeBlocks.length} time block
             {timeBlocks.length === 1 ? "" : "s"}
@@ -108,6 +110,14 @@ const ScheduledTimeList = ({
                     className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
                   >
                     Edit
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => onCopy(block)}
+                    className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                  >
+                    Copy
                   </button>
 
                   <button

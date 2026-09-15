@@ -32,7 +32,6 @@ import type {
 const getWeekDays = (weekStart: string, weekEnd: string) => {
   const start = new Date(`${weekStart.slice(0, 10)}T00:00:00`);
   const end = new Date(`${weekEnd.slice(0, 10)}T00:00:00`);
-
   const days: Date[] = [];
   const current = new Date(start);
 
@@ -54,6 +53,14 @@ const formatDateTime = (value: string) => {
   });
 };
 
+const getDateKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
+
 const SchedulePage = () => {
   const queryClient = useQueryClient();
 
@@ -63,6 +70,8 @@ const SchedulePage = () => {
   const [endAt, setEndAt] = useState("");
   const [editingBlock, setEditingBlock] = useState<TimeBlock | null>(null);
   const [blockToDelete, setBlockToDelete] = useState<TimeBlock | null>(null);
+  const [blockToCopy, setBlockToCopy] = useState<TimeBlock | null>(null);
+  const [copyTargetDate, setCopyTargetDate] = useState("");
 
   const weeklyPlansQuery = useQuery({
     queryKey: ["weekly-plans"],
@@ -97,7 +106,6 @@ const SchedulePage = () => {
 
   const createMutation = useMutation({
     mutationFn: (data: CreateTimeBlockData) => createTimeBlock(data),
-
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["time-blocks", activePlanId],
@@ -109,9 +117,25 @@ const SchedulePage = () => {
 
       toast.success("Time block created successfully.");
     },
-
     onError: () => {
       toast.error("Unable to create time block.");
+    },
+  });
+
+  const copyMutation = useMutation({
+    mutationFn: (data: CreateTimeBlockData) => createTimeBlock(data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: ["time-blocks", activePlanId],
+      });
+
+      setBlockToCopy(null);
+      setCopyTargetDate("");
+
+      toast.success("Time block copied successfully.");
+    },
+    onError: () => {
+      toast.error("Unable to copy time block.");
     },
   });
 
@@ -127,16 +151,15 @@ const SchedulePage = () => {
         status?: TimeBlockStatus;
       };
     }) => updateTimeBlock(id, data),
-
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["time-blocks", activePlanId],
       });
 
       setEditingBlock(null);
+
       toast.success("Time block updated successfully.");
     },
-
     onError: () => {
       toast.error("Unable to update time block.");
     },
@@ -144,16 +167,15 @@ const SchedulePage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: deleteTimeBlock,
-
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["time-blocks", activePlanId],
       });
 
       setBlockToDelete(null);
+
       toast.success("Time block deleted successfully.");
     },
-
     onError: () => {
       toast.error("Unable to delete time block.");
     },
@@ -171,6 +193,44 @@ const SchedulePage = () => {
       activityId: selectedActivityId,
       startAt: new Date(startAt).toISOString(),
       endAt: new Date(endAt).toISOString(),
+      status: "planned",
+    });
+  };
+
+  const handleCopy = (block: TimeBlock) => {
+    setBlockToCopy(block);
+    setCopyTargetDate("");
+  };
+
+  const confirmCopy = () => {
+    if (!blockToCopy || !copyTargetDate || !activePlanId) {
+      return;
+    }
+
+    const originalStart = new Date(blockToCopy.startAt);
+    const originalEnd = new Date(blockToCopy.endAt);
+
+    const duration = originalEnd.getTime() - originalStart.getTime();
+
+    const targetStart = new Date(
+      `${copyTargetDate}T${String(originalStart.getHours()).padStart(
+        2,
+        "0",
+      )}:${String(originalStart.getMinutes()).padStart(2, "0")}`,
+    );
+
+    const targetEnd = new Date(targetStart.getTime() + duration);
+
+    const activityId =
+      typeof blockToCopy.activityId === "string"
+        ? blockToCopy.activityId
+        : blockToCopy.activityId._id;
+
+    copyMutation.mutate({
+      weeklyPlanId: activePlanId,
+      activityId,
+      startAt: targetStart.toISOString(),
+      endAt: targetEnd.toISOString(),
       status: "planned",
     });
   };
@@ -229,6 +289,8 @@ const SchedulePage = () => {
     setSelectedActivityId("");
     setEditingBlock(null);
     setBlockToDelete(null);
+    setBlockToCopy(null);
+    setCopyTargetDate("");
   };
 
   if (weeklyPlansQuery.isLoading) {
@@ -289,6 +351,7 @@ const SchedulePage = () => {
                 isSaving={updateMutation.isPending}
                 isDeleting={deleteMutation.isPending}
                 onEdit={handleEdit}
+                onCopy={handleCopy}
                 onEditChange={setEditingBlock}
                 onSaveEdit={handleSaveEdit}
                 onCancelEdit={() => setEditingBlock(null)}
@@ -298,6 +361,93 @@ const SchedulePage = () => {
           </>
         )}
       </main>
+
+      {blockToCopy && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/50 px-4"
+          role="dialog"
+          aria-modal="true"
+          aria-labelledby="copy-time-block-title"
+        >
+          <div className="w-full max-w-md rounded-2xl bg-white p-6 shadow-xl">
+            <div className="mb-5">
+              <h2
+                id="copy-time-block-title"
+                className="text-lg font-semibold text-slate-900"
+              >
+                Copy time block
+              </h2>
+
+              <p className="mt-2 text-sm leading-6 text-slate-600">
+                Copy this scheduled activity to another day.
+              </p>
+
+              <div className="mt-3 rounded-lg bg-slate-50 px-3 py-2.5 text-sm text-slate-600">
+                {formatDateTime(blockToCopy.startAt)} —{" "}
+                {new Date(blockToCopy.endAt).toLocaleTimeString([], {
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}
+              </div>
+            </div>
+
+            <label
+              htmlFor="copy-target-date"
+              className="block text-sm font-medium text-slate-700"
+            >
+              Copy to
+            </label>
+
+            <select
+              id="copy-target-date"
+              value={copyTargetDate}
+              onChange={(event) => setCopyTargetDate(event.target.value)}
+              className="mt-2 w-full rounded-lg border border-slate-300 px-3 py-2.5 text-sm outline-none focus:border-slate-500"
+            >
+              <option value="">Select a day</option>
+
+              {weekDays
+                .filter(
+                  (day) =>
+                    getDateKey(day) !==
+                    getDateKey(new Date(blockToCopy.startAt)),
+                )
+                .map((day) => (
+                  <option key={getDateKey(day)} value={getDateKey(day)}>
+                    {day.toLocaleDateString([], {
+                      weekday: "long",
+                      month: "short",
+                      day: "numeric",
+                    })}
+                  </option>
+                ))}
+            </select>
+
+            <div className="mt-6 flex justify-end gap-3">
+              <button
+                type="button"
+                onClick={() => {
+                  setBlockToCopy(null);
+                  setCopyTargetDate("");
+                }}
+                disabled={copyMutation.isPending}
+                className="rounded-lg border border-slate-300 px-4 py-2.5 text-sm font-medium text-slate-700 transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                Cancel
+              </button>
+
+              <button
+                type="button"
+                onClick={confirmCopy}
+                disabled={!copyTargetDate || copyMutation.isPending}
+                className="rounded-lg bg-slate-900 px-4 py-2.5 text-sm font-medium text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
+              >
+                {copyMutation.isPending ? "Copying..." : "Copy block"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {blockToDelete && (
         <div

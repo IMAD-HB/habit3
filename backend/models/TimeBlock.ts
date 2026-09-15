@@ -9,6 +9,7 @@ export interface ITimeBlock extends Document {
   startAt: Date;
   endAt: Date;
   status: TimeBlockStatus;
+  notificationSentAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -45,6 +46,9 @@ const timeBlockSchema = new Schema<ITimeBlock>(
       type: String,
       enum: ["planned", "completed", "cancelled"],
       default: "planned",
+    },
+    notificationSentAt: {
+      type: Date,
     },
   },
   { timestamps: true },

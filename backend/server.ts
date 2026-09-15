@@ -1,17 +1,21 @@
+import "./config/env.js";
+
 import cors from "cors";
-import dotenv from "dotenv";
 import express from "express";
 
 import connectDB from "./config/db.js";
+
 import authRoutes from "./routes/authRoutes.js";
 import roleRoutes from "./routes/roleRoutes.js";
 import activityRoutes from "./routes/activityRoutes.js";
 import weeklyPlanRoutes from "./routes/weeklyPlanRoutes.js";
 import timeBlockRoutes from "./routes/timeBlockRoutes.js";
+import pushRoutes from "./routes/pushRoutes.js";
 
-dotenv.config();
+import { startTimeBlockNotificationScheduler } from "./services/timeBlockNotificationScheduler.js";
 
 const app = express();
+
 const PORT = process.env.PORT || 5000;
 
 const allowedOrigins = [
@@ -31,8 +35,8 @@ app.use(
       const err = new Error("Not allowed by CORS") as Error & {
         status?: number;
       };
-      err.status = 403;
 
+      err.status = 403;
       callback(err);
     },
     credentials: true,
@@ -53,9 +57,12 @@ app.use("/api/roles", roleRoutes);
 app.use("/api/activities", activityRoutes);
 app.use("/api/weekly-plans", weeklyPlanRoutes);
 app.use("/api/time-blocks", timeBlockRoutes);
+app.use("/api/push", pushRoutes);
 
 const startServer = async (): Promise<void> => {
   await connectDB();
+
+  startTimeBlockNotificationScheduler();
 
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`);

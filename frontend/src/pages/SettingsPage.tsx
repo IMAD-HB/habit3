@@ -1,5 +1,6 @@
 import SettingsHeader from "../components/settings/SettingsHeader";
 import AccountSettings from "../components/settings/AccountSettings";
+import NotificationSettings from "../components/settings/NotificationSettings";
 import PasswordSettings from "../components/settings/PasswordSettings";
 import DeleteAccountSection from "../components/settings/DeleteAccountSection";
 
@@ -19,9 +20,8 @@ const SettingsPage = () => {
 
       <div className="space-y-8">
         <AccountSettings user={user} onUpdated={setUser} />
-
+        <NotificationSettings />
         <PasswordSettings />
-
         <DeleteAccountSection />
       </div>
     </main>

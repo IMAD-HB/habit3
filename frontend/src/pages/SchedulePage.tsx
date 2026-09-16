@@ -342,6 +342,18 @@ const SchedulePage = () => {
     });
   };
 
+  const handleToggleCancel = (block: TimeBlock) => {
+    const nextStatus: TimeBlockStatus =
+      block.status === "cancelled" ? "planned" : "cancelled";
+
+    updateMutation.mutate({
+      id: block._id,
+      data: {
+        status: nextStatus,
+      },
+    });
+  };
+
   const handleDelete = (id: string) => {
     const block = timeBlocks.find((timeBlock) => timeBlock._id === id);
 
@@ -439,6 +451,7 @@ const SchedulePage = () => {
               timeBlocks={timeBlocks}
               onEditBlock={handleEdit}
               onToggleComplete={handleToggleComplete}
+              onToggleCancel={handleToggleCancel}
             />
 
             <section className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">

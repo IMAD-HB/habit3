@@ -6,6 +6,7 @@ interface WeeklyScheduleCalendarProps {
   timeBlocks: TimeBlock[];
   onEditBlock: (block: TimeBlock) => void;
   onToggleComplete: (block: TimeBlock) => void;
+  onToggleCancel: (block: TimeBlock) => void;
 }
 
 const isSameDay = (first: string, second: Date) => {
@@ -27,6 +28,7 @@ const WeeklyScheduleCalendar = ({
   timeBlocks,
   onEditBlock,
   onToggleComplete,
+  onToggleCancel,
 }: WeeklyScheduleCalendarProps) => {
   return (
     <section className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
@@ -71,29 +73,32 @@ const WeeklyScheduleCalendar = ({
                   dayBlocks.map((block) => {
                     const activity = getActivity(block.activityId);
                     const isCompleted = block.status === "completed";
+                    const isCancelled = block.status === "cancelled";
 
                     return (
                       <div
                         key={block._id}
                         className={`rounded-lg border bg-white p-2 shadow-sm transition ${
-                          isCompleted
-                            ? "border-green-200 bg-green-50/50"
-                            : "border-gray-200"
+                          isCancelled
+                            ? "border-gray-200 bg-gray-100 opacity-70"
+                            : isCompleted
+                              ? "border-green-200 bg-green-50/50"
+                              : "border-gray-200"
                         }`}
                       >
                         <div className="flex items-start gap-2">
-                          <input
-                            type="checkbox"
-                            checked={isCompleted}
-                            onChange={() => onToggleComplete(block)}
-                            onClick={(event) => event.stopPropagation()}
-                            className="mt-0.5 h-4 w-4 shrink-0 accent-green-600"
-                            aria-label={`Mark ${
-                              activity?.title ?? "activity"
-                            } as ${
-                              isCompleted ? "incomplete" : "completed"
-                            }`}
-                          />
+                          {!isCancelled && (
+                            <input
+                              type="checkbox"
+                              checked={isCompleted}
+                              onChange={() => onToggleComplete(block)}
+                              onClick={(event) => event.stopPropagation()}
+                              className="mt-0.5 h-4 w-4 shrink-0 accent-green-600"
+                              aria-label={`Mark ${
+                                activity?.title ?? "activity"
+                              } as ${isCompleted ? "incomplete" : "completed"}`}
+                            />
+                          )}
 
                           <button
                             type="button"
@@ -102,9 +107,11 @@ const WeeklyScheduleCalendar = ({
                           >
                             <p
                               className={`truncate text-sm font-medium ${
-                                isCompleted
-                                  ? "text-gray-500 line-through"
-                                  : "text-gray-900"
+                                isCancelled
+                                  ? "text-gray-400 line-through"
+                                  : isCompleted
+                                    ? "text-gray-500 line-through"
+                                    : "text-gray-900"
                               }`}
                             >
                               {activity?.title ?? "Activity"}
@@ -127,6 +134,18 @@ const WeeklyScheduleCalendar = ({
                             </p>
                           </button>
                         </div>
+
+                        <button
+                          type="button"
+                          onClick={() => onToggleCancel(block)}
+                          className={`mt-2 text-xs font-medium transition ${
+                            isCancelled
+                              ? "text-blue-600 hover:text-blue-700"
+                              : "text-red-600 hover:text-red-700"
+                          }`}
+                        >
+                          {isCancelled ? "Restore block" : "Cancel block"}
+                        </button>
                       </div>
                     );
                   })

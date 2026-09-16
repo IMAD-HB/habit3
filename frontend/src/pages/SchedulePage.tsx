@@ -70,6 +70,15 @@ const getDateKey = (date: Date) => {
   return `${year}-${month}-${day}`;
 };
 
+const getCurrentWeekStart = () => {
+  const today = new Date();
+  const day = today.getDay();
+
+  today.setDate(today.getDate() - day);
+
+  return getDateKey(today);
+};
+
 const SchedulePage = () => {
   const queryClient = useQueryClient();
 
@@ -93,7 +102,14 @@ const SchedulePage = () => {
     [weeklyPlansQuery.data],
   );
 
-  const activePlanId = selectedPlanId || weeklyPlans[0]?._id || "";
+  const currentWeekStart = getCurrentWeekStart();
+
+  const currentWeekPlan = weeklyPlans.find(
+    (plan) => plan.weekStart.slice(0, 10) === currentWeekStart,
+  );
+
+  const activePlanId =
+    selectedPlanId || currentWeekPlan?._id || weeklyPlans[0]?._id || "";
 
   const activePlan = useMemo(
     () => weeklyPlans.find((plan) => plan._id === activePlanId),

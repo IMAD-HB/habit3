@@ -10,7 +10,7 @@ import ScheduleHeader from "../components/schedule/ScheduleHeader";
 import ScheduleLoading from "../components/schedule/ScheduleLoading";
 import ScheduleNoPlan from "../components/schedule/ScheduleNoPlan";
 import SchedulePriorityForm from "../components/schedule/SchedulePriorityForm";
-import ScheduledTimeList from "../components/schedule/ScheduledTimeList";
+import TimeBlockEditor from "../components/schedule/TimeBlockEditor";
 import WeeklyPlanSelector from "../components/schedule/WeeklyPlanSelector";
 import WeeklyScheduleCalendar from "../components/schedule/WeeklyScheduleCalendar";
 
@@ -21,6 +21,7 @@ import {
   getTimeBlocks,
   updateTimeBlock,
 } from "../services/timeBlockService";
+
 import { getWeeklyPlans } from "../services/weeklyPlanService";
 
 import type {
@@ -79,18 +80,37 @@ const getCurrentWeekStart = () => {
   return getDateKey(today);
 };
 
+const getToday = () => {
+  const today = new Date();
+
+  return new Date(today.getFullYear(), today.getMonth(), today.getDate());
+};
+
+const getActivityId = (block: TimeBlock) => {
+  return typeof block.activityId === "string"
+    ? block.activityId
+    : block.activityId._id;
+};
+
 const SchedulePage = () => {
   const queryClient = useQueryClient();
 
   const [selectedPlanId, setSelectedPlanId] = useState("");
   const [selectedActivityId, setSelectedActivityId] = useState("");
+
   const [startAt, setStartAt] = useState("");
   const [endAt, setEndAt] = useState("");
+
   const [editingBlock, setEditingBlock] = useState<TimeBlock | null>(null);
+
   const [blockToDelete, setBlockToDelete] = useState<TimeBlock | null>(null);
+
   const [blockToCopy, setBlockToCopy] = useState<TimeBlock | null>(null);
+
   const [copyTargetDate, setCopyTargetDate] = useState("");
   const [selectedCopyWeek, setSelectedCopyWeek] = useState("");
+
+  const [selectedDay, setSelectedDay] = useState(getToday);
 
   const weeklyPlansQuery = useQuery({
     queryKey: ["weekly-plans"],
@@ -137,6 +157,7 @@ const SchedulePage = () => {
 
   const createMutation = useMutation({
     mutationFn: (data: CreateTimeBlockData) => createTimeBlock(data),
+
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["time-blocks", activePlanId],
@@ -148,6 +169,7 @@ const SchedulePage = () => {
 
       toast.success("Time block created successfully.");
     },
+
     onError: () => {
       toast.error("Unable to create time block.");
     },
@@ -165,12 +187,14 @@ const SchedulePage = () => {
         sourceWeeklyPlanId,
         targetWeeklyPlanId,
       }),
+
     onSuccess: (response) => {
       queryClient.invalidateQueries({
         queryKey: ["time-blocks", activePlanId],
       });
 
       const copiedCount = response.data.copiedBlocks.length;
+
       const skippedCount = response.data.skippedBlocks.length;
 
       if (skippedCount === 0) {
@@ -189,6 +213,7 @@ const SchedulePage = () => {
 
       setSelectedCopyWeek("");
     },
+
     onError: () => {
       toast.error("Unable to copy weekly schedule.");
     },
@@ -196,6 +221,7 @@ const SchedulePage = () => {
 
   const copyMutation = useMutation({
     mutationFn: (data: CreateTimeBlockData) => createTimeBlock(data),
+
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["time-blocks", activePlanId],
@@ -206,6 +232,7 @@ const SchedulePage = () => {
 
       toast.success("Time block copied successfully.");
     },
+
     onError: () => {
       toast.error("Unable to copy time block.");
     },
@@ -223,6 +250,7 @@ const SchedulePage = () => {
         status?: TimeBlockStatus;
       };
     }) => updateTimeBlock(id, data),
+
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["time-blocks", activePlanId],
@@ -232,6 +260,7 @@ const SchedulePage = () => {
 
       toast.success("Time block updated successfully.");
     },
+
     onError: () => {
       toast.error("Unable to update time block.");
     },
@@ -239,6 +268,7 @@ const SchedulePage = () => {
 
   const deleteMutation = useMutation({
     mutationFn: deleteTimeBlock,
+
     onSuccess: () => {
       queryClient.invalidateQueries({
         queryKey: ["time-blocks", activePlanId],
@@ -248,6 +278,7 @@ const SchedulePage = () => {
 
       toast.success("Time block deleted successfully.");
     },
+
     onError: () => {
       toast.error("Unable to delete time block.");
     },
@@ -289,11 +320,6 @@ const SchedulePage = () => {
     });
   };
 
-  const handleCopy = (block: TimeBlock) => {
-    setBlockToCopy(block);
-    setCopyTargetDate("");
-  };
-
   const confirmCopy = () => {
     if (!blockToCopy || !copyTargetDate || !activePlanId) {
       return;
@@ -313,14 +339,9 @@ const SchedulePage = () => {
 
     const targetEnd = new Date(targetStart.getTime() + duration);
 
-    const activityId =
-      typeof blockToCopy.activityId === "string"
-        ? blockToCopy.activityId
-        : blockToCopy.activityId._id;
-
     copyMutation.mutate({
       weeklyPlanId: activePlanId,
-      activityId,
+      activityId: getActivityId(blockToCopy),
       startAt: targetStart.toISOString(),
       endAt: targetEnd.toISOString(),
       status: "planned",
@@ -338,9 +359,12 @@ const SchedulePage = () => {
 
     updateMutation.mutate({
       id: editingBlock._id,
+
       data: {
         startAt: new Date(editingBlock.startAt).toISOString(),
+
         endAt: new Date(editingBlock.endAt).toISOString(),
+
         status: editingBlock.status,
       },
     });
@@ -352,6 +376,7 @@ const SchedulePage = () => {
 
     updateMutation.mutate({
       id: block._id,
+
       data: {
         status: nextStatus,
       },
@@ -364,6 +389,7 @@ const SchedulePage = () => {
 
     updateMutation.mutate({
       id: block._id,
+
       data: {
         status: nextStatus,
       },
@@ -389,6 +415,8 @@ const SchedulePage = () => {
   };
 
   const handlePlanChange = (planId: string) => {
+    const selectedPlan = weeklyPlans.find((plan) => plan._id === planId);
+
     setSelectedPlanId(planId);
     setSelectedActivityId("");
     setEditingBlock(null);
@@ -396,6 +424,20 @@ const SchedulePage = () => {
     setBlockToCopy(null);
     setCopyTargetDate("");
     setSelectedCopyWeek("");
+
+    if (!selectedPlan) {
+      return;
+    }
+
+    const planDays = getWeekDays(selectedPlan.weekStart, selectedPlan.weekEnd);
+
+    const today = getToday();
+
+    const todayIsInPlan = planDays.some(
+      (day) => getDateKey(day) === getDateKey(today),
+    );
+
+    setSelectedDay(todayIsInPlan ? today : planDays[0]);
   };
 
   if (weeklyPlansQuery.isLoading) {
@@ -412,7 +454,7 @@ const SchedulePage = () => {
 
   return (
     <>
-      <main className="mx-auto w-full max-w-7xl space-y-8 px-4 py-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
+      <main className="mx-auto w-full max-w-7xl space-y-6 px-4 py-6 sm:space-y-8 sm:px-6 sm:py-10 lg:px-8 lg:py-12">
         <ScheduleHeader hasPlan={true} />
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
@@ -464,7 +506,9 @@ const SchedulePage = () => {
 
             <WeeklyScheduleCalendar
               weekDays={weekDays}
+              selectedDay={selectedDay}
               timeBlocks={timeBlocks}
+              onSelectDay={setSelectedDay}
               onEditBlock={handleEdit}
               onToggleComplete={handleToggleComplete}
               onToggleCancel={handleToggleCancel}
@@ -483,23 +527,84 @@ const SchedulePage = () => {
                 onSubmit={handleCreate}
               />
 
-              <ScheduledTimeList
-                timeBlocks={timeBlocks}
-                isLoading={timeBlocksQuery.isLoading}
-                editingBlock={editingBlock}
-                isSaving={updateMutation.isPending}
-                isDeleting={deleteMutation.isPending}
-                onEdit={handleEdit}
-                onCopy={handleCopy}
-                onEditChange={setEditingBlock}
-                onSaveEdit={handleSaveEdit}
-                onCancelEdit={() => setEditingBlock(null)}
-                onDelete={handleDelete}
-              />
+              <div className="hidden lg:block">
+                <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                  <div>
+                    <h2 className="text-lg font-semibold text-gray-900">
+                      Schedule overview
+                    </h2>
+
+                    <p className="mt-1 text-sm text-gray-500">
+                      {
+                        timeBlocks.filter(
+                          (block) => block.status !== "cancelled",
+                        ).length
+                      }{" "}
+                      active time blocks this week.
+                    </p>
+                  </div>
+
+                  <div className="mt-5 space-y-3">
+                    {timeBlocks.length === 0 ? (
+                      <p className="text-sm text-gray-500">
+                        No time blocks scheduled yet.
+                      </p>
+                    ) : (
+                      [...timeBlocks]
+                        .sort(
+                          (first, second) =>
+                            new Date(first.startAt).getTime() -
+                            new Date(second.startAt).getTime(),
+                        )
+                        .map((block) => (
+                          <div
+                            key={block._id}
+                            className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-3"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleEdit(block)}
+                              className="min-w-0 flex-1 text-left"
+                            >
+                              <p className="truncate text-sm font-medium text-gray-900">
+                                {typeof block.activityId === "string"
+                                  ? "Activity"
+                                  : block.activityId.title}
+                              </p>
+
+                              <p className="mt-1 text-xs text-gray-500">
+                                {formatDateTime(block.startAt)}
+                              </p>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(block._id)}
+                              disabled={deleteMutation.isPending}
+                              className="shrink-0 text-xs font-medium text-red-600 transition hover:text-red-700 disabled:opacity-50"
+                            >
+                              Delete
+                            </button>
+                          </div>
+                        ))
+                    )}
+                  </div>
+                </div>
+              </div>
             </section>
           </>
         )}
       </main>
+
+      {editingBlock && (
+        <TimeBlockEditor
+          block={editingBlock}
+          isSaving={updateMutation.isPending}
+          onChange={setEditingBlock}
+          onSave={handleSaveEdit}
+          onCancel={() => setEditingBlock(null)}
+        />
+      )}
 
       {blockToCopy && (
         <div

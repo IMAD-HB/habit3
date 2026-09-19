@@ -512,9 +512,10 @@ const SchedulePage = () => {
               onEditBlock={handleEdit}
               onToggleComplete={handleToggleComplete}
               onToggleCancel={handleToggleCancel}
+              onDeleteBlock={handleDelete}
             />
 
-            <section className="grid gap-6 lg:grid-cols-[1fr_1.2fr]">
+            <section>
               <SchedulePriorityForm
                 priorities={activePlan.priorities}
                 selectedActivityId={selectedActivityId}
@@ -526,71 +527,6 @@ const SchedulePage = () => {
                 onEndChange={setEndAt}
                 onSubmit={handleCreate}
               />
-
-              <div className="hidden lg:block">
-                <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
-                  <div>
-                    <h2 className="text-lg font-semibold text-gray-900">
-                      Schedule overview
-                    </h2>
-
-                    <p className="mt-1 text-sm text-gray-500">
-                      {
-                        timeBlocks.filter(
-                          (block) => block.status !== "cancelled",
-                        ).length
-                      }{" "}
-                      active time blocks this week.
-                    </p>
-                  </div>
-
-                  <div className="mt-5 space-y-3">
-                    {timeBlocks.length === 0 ? (
-                      <p className="text-sm text-gray-500">
-                        No time blocks scheduled yet.
-                      </p>
-                    ) : (
-                      [...timeBlocks]
-                        .sort(
-                          (first, second) =>
-                            new Date(first.startAt).getTime() -
-                            new Date(second.startAt).getTime(),
-                        )
-                        .map((block) => (
-                          <div
-                            key={block._id}
-                            className="flex items-center justify-between gap-4 rounded-lg border border-gray-200 p-3"
-                          >
-                            <button
-                              type="button"
-                              onClick={() => handleEdit(block)}
-                              className="min-w-0 flex-1 text-left"
-                            >
-                              <p className="truncate text-sm font-medium text-gray-900">
-                                {typeof block.activityId === "string"
-                                  ? "Activity"
-                                  : block.activityId.title}
-                              </p>
-
-                              <p className="mt-1 text-xs text-gray-500">
-                                {formatDateTime(block.startAt)}
-                              </p>
-                            </button>
-
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(block._id)}
-                              disabled={deleteMutation.isPending}
-                              className="shrink-0 text-xs font-medium text-red-600 transition hover:text-red-700 disabled:opacity-50"
-                            >
-                              Delete
-                            </button>
-                          </div>
-                        ))
-                    )}
-                  </div>
-                </div>
-              </div>
             </section>
           </>
         )}

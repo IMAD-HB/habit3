@@ -9,6 +9,7 @@ interface WeeklyScheduleCalendarProps {
   onEditBlock: (block: TimeBlock) => void;
   onToggleComplete: (block: TimeBlock) => void;
   onToggleCancel: (block: TimeBlock) => void;
+  onDeleteBlock: (id: string) => void;
 }
 
 const isSameDay = (first: string, second: Date) => {
@@ -64,11 +65,13 @@ const TimeBlockCard = ({
   onEditBlock,
   onToggleComplete,
   onToggleCancel,
+  onDeleteBlock,
 }: {
   block: TimeBlock;
   onEditBlock: (block: TimeBlock) => void;
   onToggleComplete: (block: TimeBlock) => void;
   onToggleCancel: (block: TimeBlock) => void;
+  onDeleteBlock: (id: string) => void;
 }) => {
   const activity = getActivity(block.activityId);
   const isCompleted = block.status === "completed";
@@ -141,6 +144,14 @@ const TimeBlockCard = ({
         >
           {isCancelled ? "Restore" : "Cancel"}
         </button>
+
+        <button
+          type="button"
+          onClick={() => onDeleteBlock(block._id)}
+          className="text-xs font-medium text-red-600 transition hover:text-red-700"
+        >
+          Delete
+        </button>
       </div>
     </div>
   );
@@ -154,6 +165,7 @@ const WeeklyScheduleCalendar = ({
   onEditBlock,
   onToggleComplete,
   onToggleCancel,
+  onDeleteBlock,
 }: WeeklyScheduleCalendarProps) => {
   const selectedDayBlocks = sortTimeBlocks(
     timeBlocks.filter((block) => isSameDay(block.startAt, selectedDay)),
@@ -245,6 +257,7 @@ const WeeklyScheduleCalendar = ({
                 onEditBlock={onEditBlock}
                 onToggleComplete={onToggleComplete}
                 onToggleCancel={onToggleCancel}
+                onDeleteBlock={onDeleteBlock}
               />
             ))}
           </div>
@@ -306,6 +319,7 @@ const WeeklyScheduleCalendar = ({
                       onEditBlock={onEditBlock}
                       onToggleComplete={onToggleComplete}
                       onToggleCancel={onToggleCancel}
+                      onDeleteBlock={onDeleteBlock}
                     />
                   ))
                 )}
